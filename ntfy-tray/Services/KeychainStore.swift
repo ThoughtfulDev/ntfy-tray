@@ -19,7 +19,7 @@ nonisolated enum KeychainStoreError: LocalizedError, Sendable {
     }
 }
 
-actor KeychainStore {
+actor KeychainStore: BearerTokenStoring {
     private enum Storage {
         case dataProtection
         case fileBased

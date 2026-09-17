@@ -2,7 +2,7 @@
 import Foundation
 
 @MainActor
-final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
+final class NotificationCoordinator: NSObject, NotificationCoordinating, UNUserNotificationCenterDelegate {
     private let center = UNUserNotificationCenter.current()
     private var openInbox: (() -> Void)?
 
@@ -28,6 +28,17 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
         let request = UNNotificationRequest(identifier: message.id, content: content, trigger: nil)
         try await center.add(request)
+    }
+
+    func removeNotifications(withIdentifiers identifiers: [String]) {
+        guard !identifiers.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+
+    func removeAllNotifications() {
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
     }
 
     nonisolated func userNotificationCenter(

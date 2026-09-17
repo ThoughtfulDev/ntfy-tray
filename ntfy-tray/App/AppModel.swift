@@ -8,9 +8,9 @@ import SwiftData
 @Observable
 final class AppModel {
     private let modelContext: ModelContext
-    private let keychainStore = KeychainStore()
+    private let keychainStore: any BearerTokenStoring
     private let subscriptionClient = NtfySubscriptionClient()
-    private let notificationCoordinator = NotificationCoordinator()
+    private let notificationCoordinator: any NotificationCoordinating
     private var subscriptionTask: Task<Void, Never>?
     private var lastSubscribedServerURL: String?
     private var inboxRevision = 0
@@ -22,8 +22,14 @@ final class AppModel {
     private(set) var lastError: String?
     private(set) var isPrepared = false
 
-    init(modelContext: ModelContext) {
+    init(
+        modelContext: ModelContext,
+        keychainStore: any BearerTokenStoring = KeychainStore(),
+        notificationCoordinator: any NotificationCoordinating = NotificationCoordinator()
+    ) {
         self.modelContext = modelContext
+        self.keychainStore = keychainStore
+        self.notificationCoordinator = notificationCoordinator
     }
 
     var needsOnboarding: Bool {
@@ -168,6 +174,37 @@ final class AppModel {
         }
     }
 
+    func resetAppData() async throws {
+        guard let configuration else { throw AppModelError.notPrepared }
+
+        subscriptionTask?.cancel()
+        subscriptionTask = nil
+        connectionState = .idle
+
+        do {
+            try await keychainStore.deleteToken()
+
+            try modelContext.fetch(FetchDescriptor<TopicSubscription>()).forEach(modelContext.delete)
+            try modelContext.fetch(FetchDescriptor<InboxMessage>()).forEach(modelContext.delete)
+            try modelContext.fetch(FetchDescriptor<QuietHoursRule>()).forEach(modelContext.delete)
+
+            configuration.serverURLString = "https://ntfy.sh"
+            configuration.didCompleteOnboarding = false
+            configuration.isManualDoNotDisturbEnabled = false
+            try seedQuietHoursRulesIfNeeded()
+            try saveContext()
+
+            notificationCoordinator.removeAllNotifications()
+            lastSubscribedServerURL = nil
+            inboxRevision += 1
+            quietHoursRevision += 1
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
+    }
+
     func saveTopicChanges() {
         do {
             try saveContext()
@@ -225,6 +262,28 @@ final class AppModel {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    func deleteMessage(_ message: InboxMessage) {
+        do {
+            let messageID = message.id
+            try deleteMessages(matching: #Predicate { $0.id == messageID })
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func deleteMessages(forTopic topic: String) {
+        do {
+            try deleteMessages(matching: #Predicate { $0.topic == topic })
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func messageCount(forTopic topic: String) -> Int {
+        let descriptor = FetchDescriptor<InboxMessage>(predicate: #Predicate { $0.topic == topic })
+        return (try? modelContext.fetchCount(descriptor)) ?? 0
     }
 
     private func restartSubscriptionIfPossible() {
@@ -348,9 +407,12 @@ final class AppModel {
 
     private func deleteMessages(matching predicate: Predicate<InboxMessage>) throws {
         let descriptor = FetchDescriptor<InboxMessage>(predicate: predicate)
-        try modelContext.fetch(descriptor).forEach(modelContext.delete)
+        let messages = try modelContext.fetch(descriptor)
+        let notificationIdentifiers = messages.map(\.id)
+        messages.forEach(modelContext.delete)
         try saveContext()
         inboxRevision += 1
+        notificationCoordinator.removeNotifications(withIdentifiers: notificationIdentifiers)
     }
 
     private func seedQuietHoursRulesIfNeeded() throws {

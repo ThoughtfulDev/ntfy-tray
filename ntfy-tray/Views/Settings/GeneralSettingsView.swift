@@ -3,10 +3,12 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @Environment(AppModel.self) private var appModel
+    @Environment(\.openWindow) private var openWindow
     @State private var serverURL = ""
     @State private var bearerToken = ""
     @State private var launchAtLogin = false
     @State private var errorMessage: String?
+    @State private var isResetConfirmationPresented = false
 
     var body: some View {
         Form {
@@ -15,7 +17,7 @@ struct GeneralSettingsView: View {
                     .textContentType(.URL)
                 SecureField("Bearer token (optional)", text: $bearerToken)
                     .textContentType(.password)
-                Text("Only HTTPS servers are supported. The optional token is stored securely in your Data Protection Keychain.")
+                Text("Only HTTPS servers are supported. The optional token is stored securely in your Keychain.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Button("Save Server", systemImage: "checkmark") {
@@ -48,6 +50,17 @@ struct GeneralSettingsView: View {
                     }
             }
 
+            Section("Danger Zone") {
+                Button(role: .destructive) {
+                    isResetConfirmationPresented = true
+                } label: {
+                    Label("Reset App…", systemImage: "arrow.counterclockwise")
+                }
+                Text("Erases local server settings, topics, Inbox history, quiet hours, and the stored bearer token. Notification permission and Launch at Login stay unchanged.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
             if let errorMessage {
                 Section {
                     Text(errorMessage)
@@ -59,6 +72,15 @@ struct GeneralSettingsView: View {
         .task {
             await loadValues()
             await appModel.refreshNotificationAuthorizationStatus()
+        }
+        .confirmationDialog(
+            "Reset ntfy-tray?",
+            isPresented: $isResetConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Reset App", role: .destructive, action: resetApp)
+        } message: {
+            Text("This removes all local topics and messages, resets settings, and deletes the stored bearer token. This cannot be undone.")
         }
     }
 
@@ -99,6 +121,20 @@ struct GeneralSettingsView: View {
                     bearerToken: bearerToken
                 )
                 errorMessage = nil
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func resetApp() {
+        Task {
+            do {
+                try await appModel.resetAppData()
+                serverURL = "https://ntfy.sh"
+                bearerToken = ""
+                errorMessage = nil
+                openWindow(id: "onboarding")
             } catch {
                 errorMessage = error.localizedDescription
             }

@@ -35,6 +35,11 @@ struct ContentView: View {
             List(filteredMessages, selection: $selection) { message in
                 MessageRow(message: message)
                     .tag(message)
+                    .contextMenu {
+                        Button("Delete Message", systemImage: "trash", role: .destructive) {
+                            delete(message)
+                        }
+                    }
             }
             .navigationTitle(filter.title)
             .overlay {
@@ -54,9 +59,11 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            ToolbarItem {
+            ToolbarItemGroup {
                 Button("Mark All Read", systemImage: "checkmark.circle", action: appModel.markAllRead)
                     .disabled(appModel.unreadCount == 0)
+                Button("Delete Message", systemImage: "trash", action: deleteSelectedMessage)
+                    .disabled(selection == nil)
             }
         }
         .onChange(of: selection) { _, newSelection in
@@ -64,6 +71,19 @@ struct ContentView: View {
                 appModel.markRead(newSelection)
             }
         }
+        .onDeleteCommand(perform: deleteSelectedMessage)
+    }
+
+    private func deleteSelectedMessage() {
+        guard let selection else { return }
+        delete(selection)
+    }
+
+    private func delete(_ message: InboxMessage) {
+        if selection === message {
+            selection = nil
+        }
+        appModel.deleteMessage(message)
     }
 }
 
