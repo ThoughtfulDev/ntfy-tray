@@ -13,6 +13,8 @@ final class AppModel {
     private let notificationCoordinator = NotificationCoordinator()
     private var subscriptionTask: Task<Void, Never>?
     private var lastSubscribedServerURL: String?
+    private var inboxRevision = 0
+    private var quietHoursRevision = 0
 
     private(set) var configuration: ServerConfiguration?
     private(set) var connectionState: ConnectionState = .idle
@@ -29,6 +31,7 @@ final class AppModel {
     }
 
     var isQuiet: Bool {
+        _ = quietHoursRevision
         guard let configuration else { return false }
         return configuration.isManualDoNotDisturbEnabled || QuietHoursEvaluator.isQuiet(at: .now, rules: quietHoursRules)
     }
@@ -46,7 +49,8 @@ final class AppModel {
     }
 
     var unreadCount: Int {
-        (try? modelContext.fetchCount(FetchDescriptor<InboxMessage>(predicate: #Predicate { !$0.isRead }))) ?? 0
+        _ = inboxRevision
+        return (try? modelContext.fetchCount(FetchDescriptor<InboxMessage>(predicate: #Predicate { !$0.isRead }))) ?? 0
     }
 
     var quietHoursRules: [QuietHoursRule] {
@@ -175,6 +179,7 @@ final class AppModel {
     func saveQuietHoursChanges() {
         do {
             try saveContext()
+            quietHoursRevision += 1
         } catch {
             lastError = error.localizedDescription
         }
@@ -204,6 +209,18 @@ final class AppModel {
         messages.forEach { $0.isRead = true }
         do {
             try saveContext()
+            inboxRevision += 1
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func markRead(_ message: InboxMessage) {
+        guard !message.isRead else { return }
+        message.isRead = true
+        do {
+            try saveContext()
+            inboxRevision += 1
         } catch {
             lastError = error.localizedDescription
         }
@@ -304,6 +321,7 @@ final class AppModel {
             )
             modelContext.insert(message)
             try saveContext()
+            inboxRevision += 1
 
             if !message.wasSilenced, notificationAuthorizationStatus == .authorized {
                 Task { [notificationCoordinator] in
@@ -328,6 +346,7 @@ final class AppModel {
         let descriptor = FetchDescriptor<InboxMessage>(predicate: predicate)
         try modelContext.fetch(descriptor).forEach(modelContext.delete)
         try saveContext()
+        inboxRevision += 1
     }
 
     private func seedQuietHoursRulesIfNeeded() throws {

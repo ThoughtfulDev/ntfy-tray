@@ -5,49 +5,63 @@
 //  Created by Marc Hilgenberg on 17.09.26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Environment(AppModel.self) private var appModel
+    @Query(sort: \InboxMessage.receivedAt, order: .reverse) private var messages: [InboxMessage]
+    @State private var selection: InboxMessage?
+    @State private var filter = InboxFilter.all
+
+    private var filteredMessages: [InboxMessage] {
+        switch filter {
+        case .all:
+            messages
+        case .unread:
+            messages.filter { !$0.isRead }
+        }
+    }
 
     var body: some View {
         NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+            List(InboxFilter.allCases, selection: $filter) { filter in
+                Label(filter.title, systemImage: filter.symbolName)
+                    .tag(filter)
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+            .navigationTitle("Inbox")
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180)
+        } content: {
+            List(filteredMessages, selection: $selection) { message in
+                MessageRow(message: message)
+                    .tag(message)
+            }
+            .navigationTitle(filter.title)
+            .overlay {
+                if filteredMessages.isEmpty {
+                    ContentUnavailableView(
+                        filter == .unread ? "No unread notifications" : "No notifications yet",
+                        systemImage: filter == .unread ? "checkmark.circle" : "bell",
+                        description: Text(filter == .unread ? "You are all caught up." : "Messages from your topics will appear here.")
+                    )
                 }
             }
         } detail: {
-            Text("Select an item")
+            if let selection {
+                MessageDetail(message: selection)
+            } else {
+                ContentUnavailableView("Select a notification", systemImage: "bell", description: Text("Choose a notification to see its details."))
+            }
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+        .toolbar {
+            ToolbarItem {
+                Button("Mark All Read", systemImage: "checkmark.circle", action: appModel.markAllRead)
+                    .disabled(appModel.unreadCount == 0)
+            }
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+        .onChange(of: selection) { _, newSelection in
+            if let newSelection {
+                appModel.markRead(newSelection)
             }
         }
     }
@@ -55,5 +69,4 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
