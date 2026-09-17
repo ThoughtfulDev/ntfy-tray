@@ -8,7 +8,7 @@ nonisolated enum KeychainStoreError: LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .missingEntitlement:
-            "This build is not signed with a macOS development identity, so it cannot access the Keychain. Choose a signing team in Xcode, then build and run the app again."
+            "macOS did not authorize this app to access the Keychain."
         case let .unexpectedStatus(status):
             "Keychain error \(status)."
         }
@@ -20,11 +20,45 @@ nonisolated enum KeychainStoreError: LocalizedError, Sendable {
 }
 
 actor KeychainStore {
+    private enum Storage {
+        case dataProtection
+        case fileBased
+    }
+
     private let service = "com.thoughtful-dev.ntfy-tray"
     private let account = "ntfy-bearer-token"
 
     func token() throws -> String? {
-        var query = baseQuery
+        do {
+            return try token(in: .dataProtection)
+        } catch KeychainStoreError.missingEntitlement {
+            return try token(in: .fileBased)
+        }
+    }
+
+    func save(token: String) throws {
+        if token.isEmpty {
+            try deleteToken()
+            return
+        }
+
+        do {
+            try save(token: token, in: .dataProtection)
+        } catch KeychainStoreError.missingEntitlement {
+            try save(token: token, in: .fileBased)
+        }
+    }
+
+    func deleteToken() throws {
+        do {
+            try deleteToken(in: .dataProtection)
+        } catch KeychainStoreError.missingEntitlement {
+            try deleteToken(in: .fileBased)
+        }
+    }
+
+    private func token(in storage: Storage) throws -> String? {
+        var query = baseQuery(for: storage)
         query.merge([
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne,
@@ -42,15 +76,12 @@ actor KeychainStore {
         return String(decoding: data, as: UTF8.self)
     }
 
-    func save(token: String) throws {
-        if token.isEmpty {
-            try deleteToken()
-            return
-        }
-
-        var addQuery = baseQuery
+    private func save(token: String, in storage: Storage) throws {
+        var addQuery = baseQuery(for: storage)
         addQuery[kSecValueData] = Data(token.utf8)
-        addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        if storage == .dataProtection {
+            addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        }
 
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         switch addStatus {
@@ -58,7 +89,7 @@ actor KeychainStore {
             return
         case errSecDuplicateItem:
             let updates: [CFString: Any] = [kSecValueData: Data(token.utf8)]
-            let updateStatus = SecItemUpdate(baseQuery as CFDictionary, updates as CFDictionary)
+            let updateStatus = SecItemUpdate(baseQuery(for: storage) as CFDictionary, updates as CFDictionary)
             guard updateStatus == errSecSuccess else {
                 throw KeychainStoreError.from(status: updateStatus)
             }
@@ -67,21 +98,23 @@ actor KeychainStore {
         }
     }
 
-    func deleteToken() throws {
-        let query = baseQuery
-
+    private func deleteToken(in storage: Storage) throws {
+        let query = baseQuery(for: storage)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainStoreError.from(status: status)
         }
     }
 
-    private var baseQuery: [CFString: Any] {
-        [
+    private func baseQuery(for storage: Storage) -> [CFString: Any] {
+        var query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
-            kSecUseDataProtectionKeychain: true,
         ]
+        if storage == .dataProtection {
+            query[kSecUseDataProtectionKeychain] = true
+        }
+        return query
     }
 }
