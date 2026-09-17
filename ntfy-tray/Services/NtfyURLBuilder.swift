@@ -7,7 +7,7 @@ nonisolated enum NtfyURLBuilderError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidServerURL:
-            "Enter a complete HTTP or HTTPS server URL."
+            "Enter a complete HTTPS server URL."
         case .insecureTopics:
             "Add at least one valid topic before connecting."
         }
@@ -24,8 +24,7 @@ nonisolated struct NtfySubscriptionRequest: Sendable {
 nonisolated enum NtfyURLBuilder {
     static func subscriptionURL(for request: NtfySubscriptionRequest) throws -> URL {
         guard
-            let scheme = request.serverURL.scheme?.lowercased(),
-            ["http", "https"].contains(scheme),
+            request.serverURL.scheme?.lowercased() == "https",
             request.serverURL.host != nil
         else {
             throw NtfyURLBuilderError.invalidServerURL

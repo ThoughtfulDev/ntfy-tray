@@ -5,13 +5,8 @@ struct GeneralSettingsView: View {
     @Environment(AppModel.self) private var appModel
     @State private var serverURL = ""
     @State private var bearerToken = ""
-    @State private var acknowledgedInsecureTransport = false
     @State private var launchAtLogin = false
     @State private var errorMessage: String?
-
-    private var isHTTPServer: Bool {
-        serverURL.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("http://")
-    }
 
     var body: some View {
         Form {
@@ -20,12 +15,9 @@ struct GeneralSettingsView: View {
                     .textContentType(.URL)
                 SecureField("Bearer token (optional)", text: $bearerToken)
                     .textContentType(.password)
-                if isHTTPServer {
-                    Toggle("I understand HTTP can expose my notifications and token", isOn: $acknowledgedInsecureTransport)
-                    Text("Use HTTPS whenever possible. The token is stored securely in your login Keychain, but HTTP traffic is not encrypted.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Only HTTPS servers are supported. The optional token is stored securely in your Data Protection Keychain.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 Button("Save Server", systemImage: "checkmark") {
                     saveServer()
                 }
@@ -65,7 +57,7 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .task {
-            loadValues()
+            await loadValues()
             await appModel.refreshNotificationAuthorizationStatus()
         }
     }
@@ -93,23 +85,23 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private func loadValues() {
+    private func loadValues() async {
         serverURL = appModel.configuration?.serverURLString ?? "https://ntfy.sh"
-        bearerToken = appModel.storedBearerToken()
-        acknowledgedInsecureTransport = !isHTTPServer
+        bearerToken = await appModel.storedBearerToken()
         launchAtLogin = LoginItemService().isEnabled
     }
 
     private func saveServer() {
-        do {
-            try appModel.saveServer(
-                urlString: serverURL,
-                bearerToken: bearerToken,
-                acknowledgedInsecureTransport: acknowledgedInsecureTransport
-            )
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                try await appModel.saveServer(
+                    urlString: serverURL,
+                    bearerToken: bearerToken
+                )
+                errorMessage = nil
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

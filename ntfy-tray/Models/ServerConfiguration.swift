@@ -22,8 +22,4 @@ final class ServerConfiguration {
     var serverURL: URL? {
         URL(string: serverURLString)
     }
-
-    var usesInsecureTransport: Bool {
-        serverURL?.scheme?.lowercased() == "http"
-    }
 }

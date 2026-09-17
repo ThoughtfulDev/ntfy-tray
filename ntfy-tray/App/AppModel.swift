@@ -98,23 +98,20 @@ final class AppModel {
         NSWorkspace.shared.open(url)
     }
 
-    func saveServer(urlString: String, bearerToken: String, acknowledgedInsecureTransport: Bool) throws {
+    func saveServer(urlString: String, bearerToken: String) async throws {
         let normalizedURL = try validatedServerURL(from: urlString)
-        guard normalizedURL.scheme?.lowercased() != "http" || acknowledgedInsecureTransport else {
-            throw AppModelError.insecureTransportNeedsAcknowledgement
-        }
         guard let configuration else { throw AppModelError.notPrepared }
 
-        try keychainStore.save(token: bearerToken.trimmingCharacters(in: .whitespacesAndNewlines))
+        try await keychainStore.save(token: bearerToken.trimmingCharacters(in: .whitespacesAndNewlines))
         configuration.serverURLString = normalizedURL.absoluteString
         try saveContext()
         lastError = nil
         restartSubscriptionIfPossible()
     }
 
-    func storedBearerToken() -> String {
+    func storedBearerToken() async -> String {
         do {
-            return try keychainStore.token() ?? ""
+            return try await keychainStore.token() ?? ""
         } catch {
             lastError = error.localizedDescription
             return ""
@@ -124,13 +121,11 @@ final class AppModel {
     func completeOnboarding(
         urlString: String,
         bearerToken: String,
-        topicName: String,
-        acknowledgedInsecureTransport: Bool
+        topicName: String
     ) async throws {
-        try saveServer(
+        try await saveServer(
             urlString: urlString,
-            bearerToken: bearerToken,
-            acknowledgedInsecureTransport: acknowledgedInsecureTransport
+            bearerToken: bearerToken
         )
 
         if !NtfyURLBuilder.normalizeTopic(topicName).isEmpty {
@@ -240,7 +235,7 @@ final class AppModel {
         var retryDelay = 1
         while !Task.isCancelled {
             do {
-                let request = try subscriptionRequest()
+                let request = try await subscriptionRequest()
                 connectionState = retryDelay == 1 ? .connecting : .reconnecting
                 let stream = try await subscriptionClient.events(for: request)
                 connectionState = .connected
@@ -271,7 +266,7 @@ final class AppModel {
         }
     }
 
-    private func subscriptionRequest() throws -> NtfySubscriptionRequest {
+    private func subscriptionRequest() async throws -> NtfySubscriptionRequest {
         guard let configuration, let serverURL = configuration.serverURL else {
             throw NtfyURLBuilderError.invalidServerURL
         }
@@ -281,7 +276,7 @@ final class AppModel {
         return NtfySubscriptionRequest(
             serverURL: serverURL,
             topics: enabledTopics.map(\.name),
-            bearerToken: try keychainStore.token(),
+            bearerToken: try await keychainStore.token(),
             sinceMessageID: serverChanged ? nil : latestMessageID
         )
     }
@@ -364,22 +359,19 @@ final class AppModel {
         guard let url = URL(string: trimmed), url.host != nil else {
             throw NtfyURLBuilderError.invalidServerURL
         }
-        guard ["http", "https"].contains(url.scheme?.lowercased() ?? "") else {
+        guard url.scheme?.lowercased() == "https" else {
             throw NtfyURLBuilderError.invalidServerURL
         }
         return url
     }
 
     private func saveContext() throws {
-        if modelContext.hasChanges {
-            try modelContext.save()
-        }
+        try modelContext.save()
     }
 }
 
 enum AppModelError: LocalizedError {
     case notPrepared
-    case insecureTransportNeedsAcknowledgement
     case emptyTopic
     case duplicateTopic
 
@@ -387,8 +379,6 @@ enum AppModelError: LocalizedError {
         switch self {
         case .notPrepared:
             "The app is still preparing its data store."
-        case .insecureTransportNeedsAcknowledgement:
-            "Confirm that you understand an HTTP server is insecure before continuing."
         case .emptyTopic:
             "Enter a topic name."
         case .duplicateTopic:

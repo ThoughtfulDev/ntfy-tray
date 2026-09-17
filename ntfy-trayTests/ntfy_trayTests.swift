@@ -34,6 +34,19 @@ struct NtfyTrayTests {
         #expect(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(URLQueryItem(name: "since", value: "abc123")) == true)
     }
 
+    @Test func subscriptionURLRejectsInsecureHTTPServers() throws {
+        let request = NtfySubscriptionRequest(
+            serverURL: try #require(URL(string: "http://ntfy.example")),
+            topics: ["alerts"],
+            bearerToken: nil,
+            sinceMessageID: nil
+        )
+
+        #expect(throws: NtfyURLBuilderError.invalidServerURL) {
+            try NtfyURLBuilder.subscriptionURL(for: request)
+        }
+    }
+
     @Test func ntfyMessageEventsDecodeTheirMetadata() throws {
         let data = Data("""
         {"id":"a1","time":1780000000,"event":"message","topic":"alerts","message":"Backup failed","title":"Warning","tags":["warning"],"priority":4}

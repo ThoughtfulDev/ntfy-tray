@@ -7,12 +7,7 @@ struct OnboardingView: View {
     @State private var serverURL = "https://ntfy.sh"
     @State private var bearerToken = ""
     @State private var topicName = ""
-    @State private var acknowledgedInsecureTransport = false
     @State private var errorMessage: String?
-
-    private var isHTTPServer: Bool {
-        serverURL.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("http://")
-    }
 
     var body: some View {
         VStack(spacing: 24) {
@@ -54,24 +49,18 @@ struct OnboardingView: View {
             Text("Choose your server")
                 .font(.title)
                 .bold()
-            Text("Use ntfy.sh or enter the URL of your self-hosted server.")
+            Text("Use ntfy.sh or enter the HTTPS URL of your self-hosted server.")
                 .foregroundStyle(.secondary)
             TextField("Server URL", text: $serverURL)
                 .textContentType(.URL)
             SecureField("Bearer token (optional)", text: $bearerToken)
                 .textContentType(.password)
-            if isHTTPServer {
-                Toggle("I understand HTTP is insecure", isOn: $acknowledgedInsecureTransport)
-                Text("Use HTTPS whenever possible. An HTTP server can expose notification data and tokens on the network.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
             HStack {
                 Button("Back", action: retreat)
                 Spacer()
                 Button("Continue", action: advance)
                     .buttonStyle(.borderedProminent)
-                    .disabled(serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (isHTTPServer && !acknowledgedInsecureTransport))
+                    .disabled(serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
     }
@@ -132,8 +121,7 @@ struct OnboardingView: View {
                 try await appModel.completeOnboarding(
                     urlString: serverURL,
                     bearerToken: bearerToken,
-                    topicName: topicName,
-                    acknowledgedInsecureTransport: acknowledgedInsecureTransport
+                    topicName: topicName
                 )
                 dismiss()
             } catch {

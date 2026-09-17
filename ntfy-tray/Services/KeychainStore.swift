@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum KeychainStoreError: LocalizedError {
+nonisolated enum KeychainStoreError: LocalizedError, Sendable {
     case unexpectedStatus(OSStatus)
 
     var errorDescription: String? {
@@ -12,18 +12,16 @@ enum KeychainStoreError: LocalizedError {
     }
 }
 
-struct KeychainStore {
+actor KeychainStore {
     private let service = "com.thoughtful-dev.ntfy-tray"
     private let account = "ntfy-bearer-token"
 
     func token() throws -> String? {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
+        var query = baseQuery
+        query.merge([
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne,
-        ]
+        ]) { _, new in new }
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -43,40 +41,40 @@ struct KeychainStore {
             return
         }
 
-        let data = Data(token.utf8)
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-        ]
-        let attributes: [CFString: Any] = [kSecValueData: data]
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        var addQuery = baseQuery
+        addQuery[kSecValueData] = Data(token.utf8)
+        addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 
-        if updateStatus == errSecItemNotFound {
-            var addQuery = query
-            addQuery[kSecValueData] = data
-            addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-            guard addStatus == errSecSuccess else {
-                throw KeychainStoreError.unexpectedStatus(addStatus)
-            }
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        switch addStatus {
+        case errSecSuccess:
             return
-        }
-
-        guard updateStatus == errSecSuccess else {
-            throw KeychainStoreError.unexpectedStatus(updateStatus)
+        case errSecDuplicateItem:
+            let updates: [CFString: Any] = [kSecValueData: Data(token.utf8)]
+            let updateStatus = SecItemUpdate(baseQuery as CFDictionary, updates as CFDictionary)
+            guard updateStatus == errSecSuccess else {
+                throw KeychainStoreError.unexpectedStatus(updateStatus)
+            }
+        default:
+            throw KeychainStoreError.unexpectedStatus(addStatus)
         }
     }
 
     func deleteToken() throws {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-        ]
+        let query = baseQuery
+
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainStoreError.unexpectedStatus(status)
         }
+    }
+
+    private var baseQuery: [CFString: Any] {
+        [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecUseDataProtectionKeychain: true,
+        ]
     }
 }

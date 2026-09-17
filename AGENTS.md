@@ -12,7 +12,7 @@
 
 - Persist non-sensitive user data with SwiftData. Store tokens and other credentials only in Keychain.
 - Never log, commit, or place credentials in `UserDefaults`, SwiftData, previews, fixtures, or screenshots.
-- Treat custom HTTP servers as insecure: show an explicit acknowledgement before saving one.
+- Accept only HTTPS ntfy servers. Do not add App Transport Security exceptions or certificate-bypass behavior.
 
 ## User experience
 
