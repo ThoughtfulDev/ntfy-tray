@@ -323,7 +323,10 @@ final class AppModel {
             try saveContext()
             inboxRevision += 1
 
-            if !message.wasSilenced, notificationAuthorizationStatus == .authorized {
+            if NotificationDeliveryPolicy.shouldDeliver(
+                isAuthorized: notificationAuthorizationStatus == .authorized,
+                isQuiet: message.wasSilenced
+            ) {
                 Task { [notificationCoordinator] in
                     do {
                         try await notificationCoordinator.deliver(message)
