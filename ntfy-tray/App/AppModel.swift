@@ -231,7 +231,7 @@ final class AppModel {
         subscriptionTask?.cancel()
         connectionState = .idle
 
-        guard isPrepared, !needsOnboarding, !enabledTopics.isEmpty else { return }
+        guard isPrepared, !enabledTopics.isEmpty else { return }
         subscriptionTask = Task { [weak self] in
             await self?.runSubscription()
         }
