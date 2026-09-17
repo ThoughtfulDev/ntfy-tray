@@ -30,10 +30,13 @@ actor KeychainStore {
 
     func token() throws -> String? {
         do {
-            return try token(in: .dataProtection)
+            if let token = try token(in: .dataProtection) {
+                return token
+            }
         } catch KeychainStoreError.missingEntitlement {
-            return try token(in: .fileBased)
+            // A free Personal Team build can't use the data protection access group.
         }
+        return try token(in: .fileBased)
     }
 
     func save(token: String) throws {
@@ -53,8 +56,9 @@ actor KeychainStore {
         do {
             try deleteToken(in: .dataProtection)
         } catch KeychainStoreError.missingEntitlement {
-            try deleteToken(in: .fileBased)
+            // A free Personal Team build can't use the data protection access group.
         }
+        try deleteToken(in: .fileBased)
     }
 
     private func token(in storage: Storage) throws -> String? {
