@@ -32,14 +32,5 @@ struct MenuBarMenu: View {
                 NSApp.terminate(nil)
             }
         }
-        .task {
-            await appModel.prepare {
-                if appModel.needsOnboarding {
-                    openWindow(id: "onboarding")
-                } else {
-                    openWindow(id: "inbox")
-                }
-            }
-        }
     }
 }

@@ -2,13 +2,20 @@ import Foundation
 import Security
 
 nonisolated enum KeychainStoreError: LocalizedError, Sendable {
+    case missingEntitlement
     case unexpectedStatus(OSStatus)
 
     var errorDescription: String? {
         switch self {
+        case .missingEntitlement:
+            "This build is not signed with a macOS development identity, so it cannot access the Keychain. Choose a signing team in Xcode, then build and run the app again."
         case let .unexpectedStatus(status):
             "Keychain error \(status)."
         }
+    }
+
+    static func from(status: OSStatus) -> KeychainStoreError {
+        status == errSecMissingEntitlement ? .missingEntitlement : .unexpectedStatus(status)
     }
 }
 
@@ -30,7 +37,7 @@ actor KeychainStore {
             return nil
         }
         guard status == errSecSuccess, let data = result as? Data else {
-            throw KeychainStoreError.unexpectedStatus(status)
+            throw KeychainStoreError.from(status: status)
         }
         return String(decoding: data, as: UTF8.self)
     }
@@ -53,10 +60,10 @@ actor KeychainStore {
             let updates: [CFString: Any] = [kSecValueData: Data(token.utf8)]
             let updateStatus = SecItemUpdate(baseQuery as CFDictionary, updates as CFDictionary)
             guard updateStatus == errSecSuccess else {
-                throw KeychainStoreError.unexpectedStatus(updateStatus)
+                throw KeychainStoreError.from(status: updateStatus)
             }
         default:
-            throw KeychainStoreError.unexpectedStatus(addStatus)
+            throw KeychainStoreError.from(status: addStatus)
         }
     }
 
@@ -65,7 +72,7 @@ actor KeychainStore {
 
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainStoreError.unexpectedStatus(status)
+            throw KeychainStoreError.from(status: status)
         }
     }
 

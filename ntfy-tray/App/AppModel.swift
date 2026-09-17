@@ -82,11 +82,17 @@ final class AppModel {
 
     func requestNotificationPermission() async {
         do {
-            _ = try await notificationCoordinator.requestAuthorization()
+            let isAuthorized = try await notificationCoordinator.requestAuthorization()
+            await refreshNotificationAuthorizationStatus()
+            if isAuthorized {
+                lastError = nil
+            } else {
+                lastError = "Notifications are not allowed for this build. Open Notification Settings to allow them."
+            }
         } catch {
-            lastError = "Could not request notifications: \(error.localizedDescription)"
+            lastError = notificationErrorMessage(for: error, action: "request notification permission")
+            await refreshNotificationAuthorizationStatus()
         }
-        await refreshNotificationAuthorizationStatus()
     }
 
     func refreshNotificationAuthorizationStatus() async {
@@ -326,7 +332,7 @@ final class AppModel {
                     do {
                         try await notificationCoordinator.deliver(message)
                     } catch {
-                        lastError = "Could not deliver a notification: \(error.localizedDescription)"
+                        lastError = notificationErrorMessage(for: error, action: "deliver a notification")
                     }
                 }
             }
@@ -367,6 +373,14 @@ final class AppModel {
 
     private func saveContext() throws {
         try modelContext.save()
+    }
+
+    private func notificationErrorMessage(for error: Error, action: String) -> String {
+        let error = error as NSError
+        if error.domain == UNErrorDomain {
+            return "macOS could not \(action) for this build. Check Notifications settings for ntfy-tray."
+        }
+        return "Could not \(action): \(error.localizedDescription)"
     }
 }
 
