@@ -1,0 +1,77 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+release_ref=${1:?"Usage: release_notes.sh <tag-or-ref> [output-path]"}
+output_path=${2:-/dev/stdout}
+
+git rev-parse --verify --quiet "${release_ref}^{commit}" >/dev/null || {
+    print -u2 "Unknown release ref: $release_ref"
+    exit 1
+}
+
+previous_tag=$(git describe --tags --abbrev=0 "${release_ref}^" 2>/dev/null || true)
+commit_range=$release_ref
+if [[ -n "$previous_tag" ]]; then
+    commit_range="$previous_tag..$release_ref"
+fi
+
+typeset -a features fixes quality maintenance other_changes
+
+while IFS= read -r subject; do
+    description="${subject#*: }"
+    if [[ "$description" == "$subject" ]]; then
+        description="$subject"
+    fi
+
+    case "$subject" in
+        feat:* | feat\(*)
+            features+=("$description")
+            ;;
+        fix:* | fix\(*)
+            fixes+=("$description")
+            ;;
+        test:* | test\(* | refactor:* | refactor\(* | perf:* | perf\(*)
+            quality+=("$description")
+            ;;
+        chore:* | chore\(* | ci:* | ci\(* | build:* | build\(*)
+            maintenance+=("$description")
+            ;;
+        *)
+            other_changes+=("$description")
+            ;;
+    esac
+done < <(git log --format='%s' "$commit_range")
+
+print_section() {
+    local title=$1
+    shift
+    (( $# > 0 )) || return
+
+    print -r -- "## $title"
+    for item in "$@"; do
+        print -r -- "- $item"
+    done
+    print
+}
+
+{
+    print "# ntfy-tray $release_ref"
+    print
+
+    if [[ -n "$previous_tag" ]]; then
+        print "Changes since \`$previous_tag\`."
+        if [[ -n ${GITHUB_REPOSITORY:-} ]]; then
+            print "[Full changelog](https://github.com/$GITHUB_REPOSITORY/compare/$previous_tag...$release_ref)"
+        fi
+    else
+        print "Initial release."
+    fi
+    print
+
+    print_section "Features" "${features[@]}"
+    print_section "Fixes" "${fixes[@]}"
+    print_section "Quality" "${quality[@]}"
+    print_section "Maintenance" "${maintenance[@]}"
+    print_section "Other changes" "${other_changes[@]}"
+} > "$output_path"
