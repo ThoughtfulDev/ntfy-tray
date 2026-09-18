@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-26
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: >-
+          xcodebuild -quiet
+          -project ntfy-tray.xcodeproj
+          -scheme ntfy-tray
+          -destination 'platform=macOS'
+          -only-testing:ntfy-trayTests
+          test
+          CODE_SIGN_STYLE=Manual
+          CODE_SIGN_IDENTITY=-
+          DEVELOPMENT_TEAM=
+
+      - name: Build ad-hoc DMG
+        run: VERSION="$GITHUB_REF_NAME" ./scripts/build_dmg.sh
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          dmg_path="build/Release/ntfy-tray-$TAG_NAME.dmg"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "$dmg_path" --clobber
+          else
+            gh release create "$TAG_NAME" "$dmg_path" --title "$TAG_NAME" --generate-notes
+          fi
