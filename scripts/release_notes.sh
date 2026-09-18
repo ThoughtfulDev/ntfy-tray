@@ -18,35 +18,43 @@ fi
 
 typeset -a features fixes quality maintenance other_changes
 
-while IFS= read -r subject; do
+while IFS=$'\t' read -r commit_hash subject; do
     description="${subject#*: }"
     if [[ "$description" == "$subject" ]]; then
         description="$subject"
     fi
 
+    short_hash=${commit_hash[1,7]}
+    if [[ -n ${GITHUB_REPOSITORY:-} ]]; then
+        commit_reference="[\`$short_hash\`](https://github.com/$GITHUB_REPOSITORY/commit/$commit_hash)"
+    else
+        commit_reference="\`$short_hash\`"
+    fi
+    entry="$description ($commit_reference)"
+
     case "$subject" in
         feat:* | feat\(*)
-            features+=("$description")
+            features+=("$entry")
             ;;
         fix:* | fix\(*)
-            fixes+=("$description")
+            fixes+=("$entry")
             ;;
         test:* | test\(* | refactor:* | refactor\(* | perf:* | perf\(*)
-            quality+=("$description")
+            quality+=("$entry")
             ;;
         chore:* | chore\(* | ci:* | ci\(* | build:* | build\(*)
-            maintenance+=("$description")
+            maintenance+=("$entry")
             ;;
         *)
-            other_changes+=("$description")
+            other_changes+=("$entry")
             ;;
     esac
-done < <(git log --format='%s' "$commit_range")
+done < <(git log --format='%H%x09%s' "$commit_range")
 
 print_section() {
     local title=$1
     shift
-    (( $# > 0 )) || return
+    (( $# > 0 )) || return 0
 
     print -r -- "## $title"
     for item in "$@"; do

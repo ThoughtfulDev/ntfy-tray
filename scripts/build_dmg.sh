@@ -21,9 +21,10 @@ xcodebuild \
     -project ntfy-tray.xcodeproj \
     -scheme ntfy-tray \
     -configuration Release \
-    -destination 'platform=macOS' \
+    -destination 'platform=macOS,arch=arm64' \
     -derivedDataPath "$derived_data_directory" \
     build \
+    ARCHS=arm64 \
     CODE_SIGN_STYLE=Manual \
     CODE_SIGN_IDENTITY=- \
     DEVELOPMENT_TEAM= \

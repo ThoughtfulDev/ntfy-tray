@@ -32,9 +32,10 @@ jobs:
           xcodebuild -quiet
           -project ntfy-tray.xcodeproj
           -scheme ntfy-tray
-          -destination 'platform=macOS'
+          -destination 'platform=macOS,arch=arm64'
           -only-testing:ntfy-trayTests
           test
+          ARCHS=arm64
           CODE_SIGN_STYLE=Manual
           CODE_SIGN_IDENTITY=-
           DEVELOPMENT_TEAM=
