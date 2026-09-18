@@ -1,0 +1,51 @@
+<svg width="1600" height="600" viewBox="0 0 1600 600" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title description">
+  <title id="title">ntfy-tray</title>
+  <desc id="description">A calm native macOS home for notifications.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1600" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C1433"/>
+      <stop offset="0.52" stop-color="#182B68"/>
+      <stop offset="1" stop-color="#5D4CB0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1300 210) rotate(136) scale(460 420)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AFA6FF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#AFA6FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="1034" y1="174" x2="1352" y2="455" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F7FF"/>
+      <stop offset="1" stop-color="#C9CDF0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="600" rx="40" fill="url(#background)"/>
+  <rect width="1600" height="600" rx="40" fill="url(#glow)"/>
+
+  <path d="M0 486C208 404 342 538 578 449C781 373 855 260 1058 292C1250 322 1378 513 1600 406V600H0V486Z" fill="#080E28" fill-opacity="0.24"/>
+  <path d="M0 515C246 431 390 555 620 474C817 405 922 324 1115 356C1296 386 1408 498 1600 437" stroke="#B2B8FF" stroke-opacity="0.18" stroke-width="2"/>
+
+  <g opacity="0.55">
+    <circle cx="1087" cy="159" r="3" fill="white"/>
+    <circle cx="1425" cy="118" r="3" fill="white"/>
+    <circle cx="1482" cy="354" r="2" fill="white"/>
+    <circle cx="884" cy="426" r="2" fill="white"/>
+  </g>
+
+  <g>
+    <rect x="1004" y="126" width="368" height="336" rx="44" fill="#9EA6EF" fill-opacity="0.28" transform="rotate(-8 1004 126)"/>
+    <rect x="1040" y="150" width="352" height="330" rx="40" fill="url(#card)" transform="rotate(7 1040 150)"/>
+    <rect x="1066" y="178" width="318" height="278" rx="32" fill="#111E50"/>
+    <path d="M1226 233C1192 233 1165 260 1165 294V326H1148C1137 326 1133 342 1143 348L1214 389C1221 394 1230 394 1237 389L1308 348C1318 342 1314 326 1303 326H1287V294C1287 260 1260 233 1226 233ZM1226 410C1243 410 1257 399 1261 384L1226 404L1191 384C1195 399 1209 410 1226 410Z" fill="#E8EAFF"/>
+    <circle cx="1301" cy="242" r="18" fill="#8B7BFF"/>
+  </g>
+
+  <g fill="white">
+    <text x="132" y="250" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="82" font-weight="700" letter-spacing="-3">ntfy-tray</text>
+    <text x="136" y="326" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="31" font-weight="400" fill="#D8DDFF">A calm home for your notifications.</text>
+  </g>
+
+  <g transform="translate(136 144)">
+    <rect width="154" height="42" rx="21" fill="white" fill-opacity="0.12"/>
+    <circle cx="25" cy="21" r="7" fill="#B9C1FF"/>
+    <text x="44" y="27" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="17" font-weight="600" fill="#EEF0FF">macOS</text>
+  </g>
+</svg>
