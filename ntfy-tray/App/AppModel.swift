@@ -230,6 +230,7 @@ final class AppModel {
         configuration?.isManualDoNotDisturbEnabled = enabled
         do {
             try saveContext()
+            quietHoursRevision += 1
         } catch {
             lastError = error.localizedDescription
         }

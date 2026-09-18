@@ -14,6 +14,7 @@ struct ContentView: View {
     @Query(sort: \TopicSubscription.createdAt) private var topics: [TopicSubscription]
     @State private var selection: InboxMessage?
     @State private var filter = InboxSelection.all
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     private var filteredMessages: [InboxMessage] {
         switch filter {
@@ -27,7 +28,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             List(selection: $filter) {
                 Section {
                     Label(InboxSelection.all.title, systemImage: InboxSelection.all.systemSymbolName)
@@ -51,7 +52,7 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Inbox")
-            .navigationSplitViewColumnWidth(min: 160, ideal: 180)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 240)
         } content: {
             List(filteredMessages, selection: $selection) { message in
                 MessageRow(message: message)
@@ -63,6 +64,7 @@ struct ContentView: View {
                     }
             }
             .navigationTitle(filter.title)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 360)
             .overlay {
                 if filteredMessages.isEmpty {
                     ContentUnavailableView(
@@ -73,12 +75,16 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            if let selection {
-                MessageDetail(message: selection)
-            } else {
-                ContentUnavailableView("Select a notification", systemImage: "bell", description: Text("Choose a notification to see its details."))
+            Group {
+                if let selection {
+                    MessageDetail(message: selection)
+                } else {
+                    ContentUnavailableView("Select a notification", systemImage: "bell", description: Text("Choose a notification to see its details."))
+                }
             }
+            .navigationSplitViewColumnWidth(min: 360, ideal: 440)
         }
+        .navigationSplitViewStyle(.balanced)
         .toolbar {
             ToolbarItemGroup {
                 Button("Mark All Read", systemImage: "checkmark.circle", action: appModel.markAllRead)

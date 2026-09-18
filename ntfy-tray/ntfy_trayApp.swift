@@ -45,10 +45,10 @@ struct NtfyTrayApp: App {
         Window("Inbox", id: "inbox") {
             ContentView()
                 .environment(appModel)
-                .frame(minWidth: 800, minHeight: 520)
+                .frame(minWidth: 920, minHeight: 520)
         }
         .modelContainer(modelContainer)
-        .defaultSize(width: 960, height: 640)
+        .defaultSize(width: 1_040, height: 640)
 
         Window("Welcome to ntfy-tray", id: "onboarding") {
             OnboardingView()
