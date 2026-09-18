@@ -6,10 +6,7 @@ struct MenuBarStatusLabel: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Image(nsImage: NSApp.applicationIconImage)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 16, height: 16)
+        Image(nsImage: MenuBarAppIcon.image)
             .accessibilityLabel(appModel.statusLabel)
             .task {
                 await appModel.prepare {
