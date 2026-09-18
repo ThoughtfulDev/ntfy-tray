@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,12 +17,15 @@ permissions:
 jobs:
   build-and-release:
     runs-on: macos-26
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Run tests
         run: >-
@@ -31,15 +40,15 @@ jobs:
           DEVELOPMENT_TEAM=
 
       - name: Build ad-hoc DMG
-        run: VERSION="$GITHUB_REF_NAME" ./scripts/build_dmg.sh
+        run: VERSION="$RELEASE_TAG" ./scripts/build_dmg.sh
 
       - name: Write release notes
-        run: ./scripts/release_notes.sh "$GITHUB_REF_NAME" build/release-notes.md
+        run: ./scripts/release_notes.sh "$RELEASE_TAG" build/release-notes.md
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
         run: |
           dmg_path="build/Release/ntfy-tray-$TAG_NAME.dmg"
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
