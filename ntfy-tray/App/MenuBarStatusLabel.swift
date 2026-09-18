@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct MenuBarStatusLabel: View {
@@ -5,7 +6,10 @@ struct MenuBarStatusLabel: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Image(systemName: appModel.statusSymbolName)
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 16, height: 16)
             .accessibilityLabel(appModel.statusLabel)
             .task {
                 await appModel.prepare {
