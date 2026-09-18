@@ -51,6 +51,14 @@ struct GeneralSettingsView: View {
                     }
             }
 
+            Section("Credits") {
+                Text("Topic icons use Font Awesome Free 7.3.1.")
+                Link("Font Awesome Free license", destination: URL(string: "https://fontawesome.com/license/free")!)
+                Text("Icons are licensed under CC BY 4.0. Font files are licensed under SIL OFL 1.1.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Danger Zone") {
                 Button(role: .destructive) {
                     isResetConfirmationPresented = true

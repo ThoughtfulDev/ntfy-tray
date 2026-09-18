@@ -11,7 +11,7 @@ final class TopicSubscription {
 
     init(
         name: String,
-        symbolName: String = "bell.fill",
+        symbolName: String = TopicIconIdentifier.defaultValue,
         isEnabled: Bool = true,
         createdAt: Date = .now
     ) {

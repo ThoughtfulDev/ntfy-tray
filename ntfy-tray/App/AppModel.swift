@@ -141,7 +141,7 @@ final class AppModel {
         )
 
         if !NtfyURLBuilder.normalizeTopic(topicName).isEmpty {
-            try addTopic(named: topicName, symbolName: "bell.fill")
+            try addTopic(named: topicName, symbolName: TopicIconIdentifier.defaultValue)
         }
         configuration?.didCompleteOnboarding = true
         try saveContext()

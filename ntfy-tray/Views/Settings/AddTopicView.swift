@@ -4,8 +4,9 @@ struct AddTopicView: View {
     @Environment(AppModel.self) private var appModel
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var symbol = TopicSymbol.bell
+    @State private var iconIdentifier = TopicIconIdentifier.defaultValue
     @State private var errorMessage: String?
+    @State private var isIconPickerPresented = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -13,10 +14,11 @@ struct AddTopicView: View {
                 .font(.title2)
                 .bold()
             TextField("Topic name", text: $name)
-            Picker("Icon", selection: $symbol) {
-                ForEach(TopicSymbol.allCases) { symbol in
-                    Label(symbol.title, systemImage: symbol.rawValue)
-                        .tag(symbol)
+            HStack {
+                TopicIconView(identifier: iconIdentifier)
+                    .accessibilityHidden(true)
+                Button("Choose Icon…") {
+                    isIconPickerPresented = true
                 }
             }
             if let errorMessage {
@@ -33,11 +35,14 @@ struct AddTopicView: View {
         }
         .padding(24)
         .frame(width: 360)
+        .sheet(isPresented: $isIconPickerPresented) {
+            FontAwesomeIconPicker(iconIdentifier: $iconIdentifier)
+        }
     }
 
     private func addTopic() {
         do {
-            try appModel.addTopic(named: name, symbolName: symbol.rawValue)
+            try appModel.addTopic(named: name, symbolName: iconIdentifier)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

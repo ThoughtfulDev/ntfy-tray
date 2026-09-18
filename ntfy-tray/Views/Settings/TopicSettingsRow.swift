@@ -4,21 +4,19 @@ struct TopicSettingsRow: View {
     @Environment(AppModel.self) private var appModel
     @Bindable var topic: TopicSubscription
     @State private var isClearMessagesConfirmationPresented = false
+    @State private var isIconPickerPresented = false
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: topic.symbolName)
+            TopicIconView(identifier: topic.symbolName, size: 16)
                 .frame(width: 20)
                 .accessibilityHidden(true)
             Text(topic.name)
             Spacer()
-            Picker("Icon for \(topic.name)", selection: $topic.symbolName) {
-                ForEach(TopicSymbol.allCases) { symbol in
-                    Label(symbol.title, systemImage: symbol.rawValue)
-                        .tag(symbol.rawValue)
-                }
+            Button("Change Icon…") {
+                isIconPickerPresented = true
             }
-            .labelsHidden()
+            .accessibilityLabel("Choose icon for \(topic.name)")
             Toggle("Enable \(topic.name)", isOn: $topic.isEnabled)
                 .labelsHidden()
             Menu("Actions for \(topic.name)", systemImage: "ellipsis.circle") {
@@ -44,6 +42,9 @@ struct TopicSettingsRow: View {
             }
         } message: {
             Text("This removes \(messageCount) local messages for this topic. It does not delete the topic or change anything on the ntfy server.")
+        }
+        .sheet(isPresented: $isIconPickerPresented) {
+            FontAwesomeIconPicker(iconIdentifier: $topic.symbolName)
         }
     }
 

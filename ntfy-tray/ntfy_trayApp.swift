@@ -14,6 +14,8 @@ struct NtfyTrayApp: App {
     @State private var appModel: AppModel
 
     init() {
+        FontAwesomeFontRegistrar.registerFonts()
+
         let schema = Schema([
             ServerConfiguration.self,
             TopicSubscription.self,
