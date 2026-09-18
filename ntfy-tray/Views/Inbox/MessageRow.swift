@@ -5,7 +5,7 @@ struct MessageRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: message.isRead ? "bell" : "bell.badge.fill")
+            TopicIconView(identifier: message.topicIconIdentifier, size: 16)
                 .foregroundStyle(message.isRead ? Color.secondary : Color.accentColor)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {

@@ -11,8 +11,9 @@ import SwiftUI
 struct ContentView: View {
     @Environment(AppModel.self) private var appModel
     @Query(sort: \InboxMessage.receivedAt, order: .reverse) private var messages: [InboxMessage]
+    @Query(sort: \TopicSubscription.createdAt) private var topics: [TopicSubscription]
     @State private var selection: InboxMessage?
-    @State private var filter = InboxFilter.all
+    @State private var filter = InboxSelection.all
 
     private var filteredMessages: [InboxMessage] {
         switch filter {
@@ -20,14 +21,34 @@ struct ContentView: View {
             messages
         case .unread:
             messages.filter { !$0.isRead }
+        case let .topic(name):
+            messages.filter { $0.topic.localizedCaseInsensitiveCompare(name) == .orderedSame }
         }
     }
 
     var body: some View {
         NavigationSplitView {
-            List(InboxFilter.allCases, selection: $filter) { filter in
-                Label(filter.title, systemImage: filter.symbolName)
-                    .tag(filter)
+            List(selection: $filter) {
+                Section {
+                    Label(InboxSelection.all.title, systemImage: InboxSelection.all.systemSymbolName)
+                        .tag(InboxSelection.all)
+                    Label(InboxSelection.unread.title, systemImage: InboxSelection.unread.systemSymbolName)
+                        .tag(InboxSelection.unread)
+                }
+
+                if !topics.isEmpty {
+                    Section("Topics") {
+                        ForEach(topics) { topic in
+                            Label {
+                                Text(topic.name)
+                            } icon: {
+                                TopicIconView(identifier: topic.symbolName, size: 14)
+                                    .accessibilityHidden(true)
+                            }
+                            .tag(InboxSelection.topic(topic.name))
+                        }
+                    }
+                }
             }
             .navigationTitle("Inbox")
             .navigationSplitViewColumnWidth(min: 160, ideal: 180)
@@ -70,6 +91,9 @@ struct ContentView: View {
             if let newSelection {
                 appModel.markRead(newSelection)
             }
+        }
+        .onChange(of: filter) {
+            selection = nil
         }
         .onDeleteCommand(perform: deleteSelectedMessage)
     }

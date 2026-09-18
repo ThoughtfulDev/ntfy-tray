@@ -75,6 +75,7 @@ final class AppModel {
             }
             self.configuration = configuration
             try seedQuietHoursRulesIfNeeded()
+            try updateMessageTopicIcons()
             try modelContext.save()
             notificationCoordinator.configure(openInbox: openInbox)
             await refreshNotificationAuthorizationStatus()
@@ -207,7 +208,9 @@ final class AppModel {
 
     func saveTopicChanges() {
         do {
+            try updateMessageTopicIcons()
             try saveContext()
+            inboxRevision += 1
             restartSubscriptionIfPossible()
         } catch {
             lastError = error.localizedDescription
@@ -372,6 +375,7 @@ final class AppModel {
             let message = InboxMessage(
                 id: event.id,
                 topic: event.topic,
+                topicIconIdentifier: iconIdentifier(for: event.topic),
                 title: event.title ?? event.topic,
                 body: event.message ?? "",
                 receivedAt: event.receivedAt,
@@ -403,6 +407,23 @@ final class AppModel {
     private func containsMessage(id: String) -> Bool {
         let descriptor = FetchDescriptor<InboxMessage>(predicate: #Predicate { $0.id == id })
         return ((try? modelContext.fetchCount(descriptor)) ?? 0) > 0
+    }
+
+    private func iconIdentifier(for topic: String) -> String {
+        let topicName = topic
+        let descriptor = FetchDescriptor<TopicSubscription>(predicate: #Predicate { $0.name == topicName })
+        return (try? modelContext.fetch(descriptor).first?.symbolName) ?? TopicIconIdentifier.defaultValue
+    }
+
+    private func updateMessageTopicIcons() throws {
+        let topics = try modelContext.fetch(FetchDescriptor<TopicSubscription>())
+        let iconIdentifiers = Dictionary(uniqueKeysWithValues: topics.map { ($0.name, $0.symbolName) })
+        let messages = try modelContext.fetch(FetchDescriptor<InboxMessage>())
+        for message in messages {
+            if let iconIdentifier = iconIdentifiers[message.topic] {
+                message.topicIconIdentifier = iconIdentifier
+            }
+        }
     }
 
     private func deleteMessages(matching predicate: Predicate<InboxMessage>) throws {

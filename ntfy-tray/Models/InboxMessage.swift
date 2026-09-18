@@ -5,6 +5,7 @@ import SwiftData
 final class InboxMessage {
     var id: String
     var topic: String
+    var topicIconIdentifier: String = TopicIconIdentifier.defaultValue
     var title: String
     var body: String
     var receivedAt: Date
@@ -16,6 +17,7 @@ final class InboxMessage {
     init(
         id: String,
         topic: String,
+        topicIconIdentifier: String = TopicIconIdentifier.defaultValue,
         title: String,
         body: String,
         receivedAt: Date,
@@ -26,6 +28,7 @@ final class InboxMessage {
     ) {
         self.id = id
         self.topic = topic
+        self.topicIconIdentifier = topicIconIdentifier
         self.title = title
         self.body = body
         self.receivedAt = receivedAt

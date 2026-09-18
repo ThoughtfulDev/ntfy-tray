@@ -24,7 +24,12 @@ final class NotificationCoordinator: NSObject, NotificationCoordinating, UNUserN
         content.title = message.title
         content.body = message.body
         content.sound = .default
+        content.subtitle = message.topic
+        content.threadIdentifier = message.topic
         content.userInfo = ["messageID": message.id]
+        if let attachment = try? TopicNotificationIconAttachment.make(for: message) {
+            content.attachments = [attachment]
+        }
 
         let request = UNNotificationRequest(identifier: message.id, content: content, trigger: nil)
         try await center.add(request)
@@ -34,11 +39,13 @@ final class NotificationCoordinator: NSObject, NotificationCoordinating, UNUserN
         guard !identifiers.isEmpty else { return }
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
         center.removeDeliveredNotifications(withIdentifiers: identifiers)
+        TopicNotificationIconAttachment.removeAttachments(withIdentifiers: identifiers)
     }
 
     func removeAllNotifications() {
         center.removeAllPendingNotificationRequests()
         center.removeAllDeliveredNotifications()
+        TopicNotificationIconAttachment.removeAllAttachments()
     }
 
     nonisolated func userNotificationCenter(
