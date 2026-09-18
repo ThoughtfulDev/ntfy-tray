@@ -3,6 +3,7 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @Environment(AppModel.self) private var appModel
+    @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.openWindow) private var openWindow
     @State private var serverURL = ""
     @State private var bearerToken = ""
@@ -134,6 +135,7 @@ struct GeneralSettingsView: View {
                 serverURL = "https://ntfy.sh"
                 bearerToken = ""
                 errorMessage = nil
+                dismissWindow(id: "settings")
                 openWindow(id: "onboarding")
             } catch {
                 errorMessage = error.localizedDescription
