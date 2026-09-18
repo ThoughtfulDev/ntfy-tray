@@ -19,6 +19,12 @@ Built to feel at home on the Mac: clear, private, and out of the way until it is
 - Do Not Disturb when you want less noise
 - Designed as a native macOS companion
 
+## Guides
+
+- [Set up ntfy-tray](docs/SETUP.md)
+- [Develop ntfy-tray](docs/DEVELOPMENT.md)
+- [Contribute to ntfy-tray](docs/CONTRIBUTING.md)
+
 ---
 
 Made with care for people who prefer their notifications intentional.
